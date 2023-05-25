@@ -88,18 +88,12 @@ def dfs_path(state_t, halt_states=None, path=None):
                 else:
                     deep_paths.append(new_paths)
                     break
-        # else:
-        #     # print('dfs_path(): Loop')
 
     return deep_paths
 
 
-def alpha_safe_combinations(alpha_plateau):
-    pass
-
-
 def admissible(plan_g, state_t: State, U_comp):
-    # AD-ii
+    # AD-ii This probably needs to change
     if plan_g is None:
         return True
 
@@ -128,8 +122,7 @@ def admissible(plan_g, state_t: State, U_comp):
                 return True
 
     # AD-iii
-    if appeared_once_U:
-        return True
+    return appeared_once_U
 
 
 def is_threat_pair(state_t, state_x: State, plan_g):
@@ -197,7 +190,7 @@ class Game:
                     continue
 
                 if state_t.is_terminal_of(state_u):
-                    state_t.add_terminal(state_u)
+                    state_t.set_terminal(state_u)
 
         self.playable_states[self.states[0]] = [self.states[2]]
         self.playable_states[self.states[2]] = [self.states[4]]
@@ -209,8 +202,13 @@ class Game:
 
     def equilibrium(self):
 
+        # for state_t in self.playable_states:
+        #     print(all_plans(state_t))
+
         safe_steps = {state: find_safe_steps(state) for state in self.playable_states}
+        print(safe_steps)
         alpha_plateau = self.find_alpha_plateaus()
+        print(alpha_plateau)
 
     def find_alpha_plateaus(self):
 

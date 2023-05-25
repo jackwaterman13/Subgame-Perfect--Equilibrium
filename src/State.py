@@ -6,6 +6,7 @@ class State:
         
         """
         self.player = player
+        self.suffix = suffix
         self.neighbours = []
 
         self.terminal = True
@@ -52,9 +53,14 @@ class State:
             return self.sid == state.sid and state.terminal
         return False
 
-    def add_terminal(self, state):
+    def set_terminal(self, state):
         self.terminal_state = state
         self.payoffs = state.payoffs
+        self.alpha = self.payoffs[self.player]
+
+    def add_terminal(self, payoffs):
+        self.terminal_state = State(self.player, self.suffix, payoffs)
+        self.payoffs = payoffs
         self.alpha = self.payoffs[self.player]
 
     def payoffs(self):

@@ -1,6 +1,21 @@
 import graphviz
 
 
+def render_game(game_dict: dict):
+    graph = graphviz.Digraph('game', engine='circo')
+
+    for state in game_dict:
+        # Neighbours
+        for neighbour in game_dict[state]:
+            graph.edge(state.id, neighbour.id)
+
+        # Terminal state render
+        graph.node(state.terminal_state.id, label=str(tuple(state.payoffs)), shape='plaintext')
+        graph.edge(state.id, state.terminal_state.id)
+
+    graph.render(directory='graph-renders', view=True, format='png')
+
+
 class Game_Render:
     def __init__(self):
         self.graph = graphviz.Digraph('game', engine='circo')
@@ -25,7 +40,7 @@ class Game_Render:
         graph = self.graph
 
         name = f'{parent}p'
-        graph.node(name, label=tuple(payoffs).__str__(), shape='plaintext')
+        graph.node(name, label=str(tuple(payoffs)), shape='plaintext')
         graph.edge(parent, name)
 
     def render_graph(self):
