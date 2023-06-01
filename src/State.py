@@ -1,3 +1,6 @@
+from Plan_Finder import *
+
+
 class State:
     def __init__(self, player: int, suffix='', payoffs=None):
         """
@@ -17,6 +20,9 @@ class State:
 
         self.sid = f'{self.player}{suffix}'
         self.id = f'{self.player + 1}{suffix}*'
+
+        self.plans = None
+        self.viable = None
 
         if payoffs is None:
             self.terminal = False
@@ -78,3 +84,12 @@ class State:
             if state is None:
                 return self.terminal_state.payoffs[self.player]
             return self.terminal_state.payoffs[state.player]
+
+    def create_plans(self):
+        self.plans = get_all_plans(self)
+
+    def update_viable(self, viable):
+        self.viable = viable
+
+    def update_alpha(self, alpha):
+        self.alpha = alpha

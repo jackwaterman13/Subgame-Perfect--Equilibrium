@@ -1,20 +1,36 @@
+from State import *
 
-def all_plans(state_t):
-    deep_paths = dfs_path(state_t)
 
-    plans = []
+def get_all_plans(state_t):
 
-    for path in deep_paths:
-        plan = []
-        for state_t in path:
-            plan.append(state_t)
-            terminal_plan = plan.copy()
-            terminal_plan.append(state_t.terminal_state)
+    all_plans = []
 
-            if terminal_plan not in plans:
-                plans.append(terminal_plan)
+    for path in dfs_path(state_t):
+        find_plans_on_path(path, all_plans)
 
-    return plans
+    return all_plans
+
+
+def find_plans_on_path(path, all_plans):
+    current_plan = []
+
+    for state_t in path:
+
+        if state_t in current_plan:
+            current_plan.append(state_t)
+            loop_plan = Plan(current_plan, False)
+
+            if loop_plan not in all_plans:
+                all_plans.append(loop_plan)
+            continue
+
+        current_plan.append(state_t)
+        terminal_plan = Plan(current_plan + [state_t.terminal_state])
+
+        if terminal_plan not in all_plans:
+            all_plans.append(terminal_plan)
+
+    return all_plans
 
 
 def dfs_path(state_t, halt_states=None, path=None):
@@ -28,21 +44,59 @@ def dfs_path(state_t, halt_states=None, path=None):
 
     for state_u in state_t.neighbours:
 
-        if state_u in halt_states:
-            # path.append(state_u)
-            deep_paths.append(path)
+        if state_u in path:
+            loop = path.copy()
+            loop.append(state_u)
+            deep_paths.append(loop)
             continue
 
-        if state_u not in path:
-            next_path = path.copy()
-            next_path.append(state_u)
-            new_paths = dfs_path(state_u, halt_states, next_path)
+        next_path = path.copy()
+        next_path.append(state_u)
+        new_paths = dfs_path(state_u, halt_states, next_path)
 
-            for path_y in new_paths:
-                if isinstance(path_y, list):
-                    deep_paths.append(path_y)
-                else:
-                    deep_paths.append(new_paths)
-                    break
+        for path_y in new_paths:
+            if isinstance(path_y, list):
+                deep_paths.append(path_y)
+            else:
+                deep_paths.append(new_paths)
+                break
 
     return deep_paths
+
+
+class Plan:
+    def __init__(self, plan=None, absorbing=True):
+        if plan is None:
+            plan = []
+        self.plan = plan
+        self.absorbing = absorbing
+
+    def __len__(self):
+        return len(self.plan)
+
+    def __str__(self):
+        return str(self.plan)
+
+    def __repr__(self):
+        return repr(self.plan)
+
+    def __eq__(self, other):
+        if isinstance(other, Plan):
+            return self.plan == other.plan and self.absorbing == other.absorbing
+        return False
+
+    def __getitem__(self, item):
+        return self.plan[item]
+
+    def get_payoff(self, state):
+        if not self.absorbing:
+            return 0
+
+        return self.plan[-1].get_payoff(state)
+
+
+    def get_state_set(self):
+        return set(self.plan)
+
+    def is_absorbing(self):
+        return self.absorbing

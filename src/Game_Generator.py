@@ -9,8 +9,10 @@ def create_game(num_players, num_states):
     create_edges(states, num_states)
     create_terminals(states, num_players)
 
-    adjacency_dict = {state: state.neighbours for state in states}
-    return adjacency_dict
+    for state in states:
+        state.create_plans()
+
+    return {state: state.neighbours for state in states}
 
 
 def create_states(num_players, num_states):
@@ -68,12 +70,40 @@ def create_edges(states, num_states):
         edge_count += 1
 
 
-def create_terminals(states, num_players, min_payoff=-3, max_payoff=3):
+def create_terminals(states, num_players, min_payoff=-2, max_payoff=2):
     for state in states:
         payoffs = np.random.randint(low=min_payoff, high=max_payoff + 1, size=num_players)
         state.add_terminal(payoffs)
 
 
-game_dict = create_game(4, 5)
-render_game(game_dict)
+def fig_4_game():
+    states = [State(0, suffix='a'), State(1), State(0, suffix='b'), State(2)]
+    payoffs = [[-2, 0, 1], [-3, 1, 0], [-1, 2, -2], [2, 2, -1]]
+    neighbours_list = [[states[1]], [states[2]], [states[0], states[3]], [states[0]]]
 
+    for state, neighbours, payoff in zip(states, neighbours_list, payoffs):
+        state.add_neighbours(neighbours)
+        state.add_terminal(payoff)
+
+    for state in states:
+        state.create_plans()
+
+    return {state: state.neighbours for state in states}
+
+
+def alpha_exit_game():
+    states = [State(0), State(1), State(2), State(3), State(4)]
+    payoffs = [[-1, -1, -1, -1, 2], [-2, -2, -1, 0, 0], [0, -3, -2, -1, 0], [0, 0, -3, -2, 0], [2, 2, 2, -3, 1]]
+    neighbours_list = [[states[1]], [states[2]], [states[3]], [states[4]], [states[0]]]
+
+    for state, neighbours, payoff in zip(states, neighbours_list, payoffs):
+        state.add_neighbours(neighbours)
+        state.add_terminal(payoff)
+
+    for state in states:
+        state.create_plans()
+
+    return {state: state.neighbours for state in states}
+
+
+# render_game(alpha_exit_game())
