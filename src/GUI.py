@@ -1,53 +1,31 @@
-# Import required libraries
-from tkinter import *
-from tkinter import ttk
-import matplotlib
-import matplotlib.pyplot as plt
+import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
-# Use TkAgg in the backend of tkinter application
-matplotlib.use('TkAgg')
+# Create a Tkinter window
+window = tk.Tk()
+window.title("Table Display")
 
-# Create an instance of tkinter frame
-win = Tk()
+# Define the table data
+data = [
+    ['John', 25, 'New York'],
+    ['Jane', 30, 'London']
+]
 
-# Set the size of the window
-win.geometry("700x350")
+# Create a Matplotlib figure and axes
+fig = Figure(figsize=(5, 3), dpi=100)
+ax = fig.add_subplot(111)
 
-# Set the title of the window
-win.title("LaTex Viewer")
+# Create the table
+table = ax.table(cellText=data, colLabels=['Name', 'Age', 'City'], loc='center')
 
-# Define a function to get the figure output
-def graph(text):
-   # Get the Entry Input
-   tmptext = entry.get()
-   tmptext = "$"+tmptext+"$"
-   # Clear any previous Syntax from the figure
-   wx.clear()
-   wx.text(0.2, 0.6, tmptext, fontsize = 20)
-   canvas.draw()
-# Create a Frame object
-frame = Frame(win)
-frame.pack()
-# Create an Entry widget
-var = StringVar()
-entry = Entry(frame, width=70, textvariable=var)
-entry.pack()
+# Hide the axes
+ax.axis('off')
 
-# Add a label widget in the frame
-label = Label(frame)
-label.pack()
+# Create a Tkinter canvas to display the table
+canvas = FigureCanvasTkAgg(fig, master=window)
+canvas.draw()
+canvas.get_tk_widget().pack()
 
-# Define the figure size and plot the figure
-fig = matplotlib.figure.Figure(figsize=(7, 4), dpi=100)
-wx = fig.add_subplot(111)
-canvas = FigureCanvasTkAgg(fig, master=label)
-canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
-canvas._tkcanvas.pack(side=TOP, fill=BOTH, expand=1)
-
-# Set the visibility of the Canvas figure
-wx.get_xaxis().set_visible(False)
-wx.get_yaxis().set_visible(False)
-
-win.bind('<Return>', graph)
-win.mainloop()
+# Start the Tkinter event loop
+window.mainloop()

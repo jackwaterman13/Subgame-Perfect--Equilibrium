@@ -2,7 +2,6 @@ from State import *
 
 
 def get_all_plans(state_t):
-
     all_plans = []
 
     for path in dfs_path(state_t):
@@ -75,9 +74,13 @@ class Plan:
         return len(self.plan)
 
     def __str__(self):
+        if not self.absorbing:
+            return str(self.plan) + ' Non-Absorbing'
         return str(self.plan)
 
     def __repr__(self):
+        if not self.absorbing:
+            return repr(self.plan) + ' Non-Absorbing'
         return repr(self.plan)
 
     def __eq__(self, other):
@@ -93,7 +96,6 @@ class Plan:
             return 0
 
         return self.plan[-1].get_payoff(state)
-
 
     def get_state_set(self):
         return set(self.plan)

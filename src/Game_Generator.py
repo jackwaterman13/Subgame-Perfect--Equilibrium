@@ -1,5 +1,6 @@
 import numpy as np
 import string
+import Data_Manager
 from State import *
 from Game_Render import *
 
@@ -106,4 +107,9 @@ def alpha_exit_game():
     return {state: state.neighbours for state in states}
 
 
-# render_game(alpha_exit_game())
+if __name__ == "__main__":
+    game = fig_4_game()
+    Data_Manager.save_game(game, 'fig_4_game')
+
+    game = Data_Manager.read_game('fig_4_game')
+    render_game(game, 'fig_4_game')
