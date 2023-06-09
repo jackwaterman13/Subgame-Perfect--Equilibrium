@@ -1,4 +1,4 @@
-from State import *
+from .State import *
 
 
 def get_all_plans(state_t):
@@ -75,12 +75,12 @@ class Plan:
 
     def __str__(self):
         if not self.absorbing:
-            return str(self.plan) + ' Non-Absorbing'
+            return str(self.plan) + ' N-A'
         return str(self.plan)
 
     def __repr__(self):
         if not self.absorbing:
-            return repr(self.plan) + ' Non-Absorbing'
+            return repr(self.plan) + ' N-A'
         return repr(self.plan)
 
     def __eq__(self, other):

@@ -305,6 +305,6 @@ class MainWindow(ttk.Frame):
 
 
 if __name__ == "__main__":
-    filename = 'graph-renders/new_test.gv.png'
+    filename = '../graph-renders/new_test.gv.png'
     app = MainWindow(tk.Tk(), path=filename)
     app.mainloop()

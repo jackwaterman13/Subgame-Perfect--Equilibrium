@@ -1,8 +1,8 @@
-import numpy as np
+import json
 import string
-import Data_Manager
-from State import *
-from Game_Render import *
+
+import numpy as np
+from .State import *
 
 
 def create_game(num_players, num_states):
@@ -92,7 +92,23 @@ def fig_4_game():
     return {state: state.neighbours for state in states}
 
 
-def alpha_exit_game():
+def alpha_exit_game_1():
+    states = [State(0), State(1), State(2, suffix='a'), State(2, suffix='b'), State(2, suffix='c')]
+    payoffs = [[1, 0, 0], [2, -1, 0], [2, -1, -1], [2, -2, -2], [2, -1, -1]]
+    neighbours_list = [[states[1]], [states[2]], [states[3]], [states[4]], [states[0]]]
+
+    for state, neighbours, payoff in zip(states, neighbours_list, payoffs):
+        state.add_neighbours(neighbours)
+        state.add_terminal(payoff)
+
+    for state in states:
+        state.create_plans()
+
+    game_dict = {state: state.neighbours for state in states}
+    return game_dict
+
+
+def alpha_exit_game_2():
     states = [State(0), State(1), State(2), State(3), State(4)]
     payoffs = [[-1, -1, -1, -1, 2], [-2, -2, -1, 0, 0], [0, -3, -2, -1, 0], [0, 0, -3, -2, 0], [2, 2, 2, -3, 1]]
     neighbours_list = [[states[1]], [states[2]], [states[3]], [states[4]], [states[0]]]
@@ -104,12 +120,66 @@ def alpha_exit_game():
     for state in states:
         state.create_plans()
 
+    game_dict = {state: state.neighbours for state in states}
+    return game_dict
+
+
+def save_game(game: dict, game_id):
+    states = [(state.player, state.suffix, state.payoffs) for state in game]
+
+    edge_list = []
+    for state_t in game:
+        edge_list.append([(state.player, state.suffix) for state in game[state_t]])
+
+    data = {
+        'states': states,
+        'edge_list': edge_list
+    }
+
+    filename = f'src/game_saves/{game_id}.json'
+    with open(filename, 'w') as file:
+        json.dump(data, file)
+
+    print(f"Game saved to {filename}")
+
+
+def read_game(game_id):
+    filename = f'src/game_saves/{game_id}.json'
+    with open(filename, 'r') as file:
+        loaded_data = json.load(file)
+
+    states_ids = loaded_data['states']
+    states = []
+
+    for state_tuple in states_ids:
+        state = State(state_tuple[0], suffix=state_tuple[1])
+        state.add_terminal(state_tuple[2])
+        states.append(state)
+
+    edge_list = loaded_data['edge_list']
+
+    for state, neighbours in zip(states, edge_list):
+        state.add_neighbours(get_neighbour_list(neighbours, states))
+
+    for state in states:
+        state.create_plans()
+
     return {state: state.neighbours for state in states}
+
+
+def get_neighbour_list(neighbours, states):
+    neighbour_list = []
+    for neighbour in neighbours:
+        for state_u in states:
+            if state_u.player == neighbour[0] and state_u.suffix == neighbour[1]:
+                neighbour_list.append(state_u)
+                break
+
+    return neighbour_list
 
 
 if __name__ == "__main__":
     game = fig_4_game()
-    Data_Manager.save_game(game, 'fig_4_game')
+    save_game(game, 'fig_4_game')
 
-    game = Data_Manager.read_game('fig_4_game')
-    render_game(game, 'fig_4_game')
+    game = read_game('fig_4_game')

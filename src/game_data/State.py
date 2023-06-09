@@ -1,4 +1,4 @@
-from Plan_Finder import *
+from .Plan_Finder import *
 
 
 class State:
@@ -41,6 +41,26 @@ class State:
         if isinstance(other, State):
             return self.id == other.id
         return False
+
+    def __lt__(self, other):
+        if self.player != other.player:
+            return self.player < other.player
+
+        if self.suffix == other.suffix:
+            return False
+
+        if self.suffix == '' and other.suffix != '':
+            return True
+
+        if self.suffix != '' and other.suffix == '':
+            return False
+
+        return self.suffix < other.suffix
+
+    def get_actions(self):
+        actions = self.neighbours.copy()
+        actions.append(self.terminal_state)
+        return actions
 
     def same_player(self, other):
         if isinstance(other, State):
@@ -93,3 +113,8 @@ class State:
 
     def update_alpha(self, alpha):
         self.alpha = alpha
+
+    def get_viable(self):
+        if self.terminal:
+            return Plan([self])
+        return self.viable
