@@ -1,14 +1,18 @@
-from Alpha_Exit import *
-from game_data.Data_Structures import *
-from game_data.Game_Generator import *
+from alpha_exit import *
+from game_data.data_structures import *
+from game_data.game_generator import *
 from itertools import combinations
 
 
-class Game:
-    def __init__(self, game_id, num_player=3, num_states=5):
-        # self.game = create_game(num_player, num_states)
-        self.game = fig_4_game()
+class IterationSolver:
+    def __init__(self, game_map, game_id):
+        self.game = game_map
+        self.game_id = game_id
+
+        self.alpha_vector = None
+        self.alpha_exits = None
         self.alpha_plateaus = None
+        self.safe_steps = None
         self.all_U_compatible = None
         self.viable_compatible = None
         self.admissible_plans = None
@@ -16,12 +20,24 @@ class Game:
         self.gamma = None
         self.converged = False
 
-    def get_alpha_dict(self):
-        print('-Alpha-')
-        for state in self.game:
-            print({state: state.alpha})
-        print('-------')
-        return {state: state.alpha for state in self.game}
+    def perform_iteration(self):
+
+        self.alpha_vector = {state: state.alpha for state in self.game}
+        self.get_viable_plans()
+        self.get_safe_steps()
+        self.get_alpha_plateaus()
+        self.get_U_compatible()
+        self.get_viable_compatible()
+        self.get_alpha_exits()
+        self.get_admissible()
+        self.get_beta()
+
+        return Iteration_Data(self.get_gamma(), self.alpha_vector, self.safe_steps, self.alpha_exits)
+
+    def get_end_game_safe_steps(self):
+        self.get_viable_plans()
+        self.get_safe_steps()
+        return self.safe_steps
 
     def get_viable_plans(self):
         viable_plans = {}
@@ -56,13 +72,16 @@ class Game:
 
         return self.viable_compatible
 
+    def get_alpha_exits(self):
+        self.alpha_exits = find_alpha_exit(self.game, self.safe_steps)
+        return self.alpha_exits
+
     def get_admissible(self):
         self.admissible_plans = {}
 
         for plateau in self.alpha_plateaus:
             self.admissible_plans[plateau] = plateau_admissible(self.viable_compatible[plateau])
 
-        find_alpha_exit(self.game, self.get_safe_steps())
         return self.admissible_plans
 
     def get_beta(self):
@@ -87,23 +106,20 @@ class Game:
         return self.converged
 
     def get_safe_steps(self):
-        return {state: find_safe_steps(state) for state in self.game}
+        self.safe_steps = {state: find_safe_steps(state) for state in self.game}
+        return self.safe_steps
 
 
 def find_gamma(beta):
-    # 4 INDENTATIONS: cool
-    gamma_candidates = []
+    gamma_candidates = {}
+
     for plateau in beta:
         for beta_plat in beta[plateau]:
             for u_map in beta_plat:
                 if beta_plat[u_map].state_payoff > plateau.alpha:
-                    gamma_candidates.append((u_map, beta_plat[u_map], False))
+                    gamma_candidates[u_map] = beta_plat[u_map]
 
-    if not gamma_candidates:
-        return {'Converged': True}
-
-    min_phi = min(gamma_candidates, key=lambda tpl: tpl[1].state_payoff)
-    return {'U': min_phi[0].u_map, 'Plan': min_phi[1], 'Converged': False}
+    return gamma_candidates
 
 
 def plateau_beta(admissible_plans):
@@ -127,12 +143,10 @@ def find_alpha_plateaus(game_dict):
         alpha_map[f'{state.player}{state.alpha}'] = states
 
     all_plateaus = []
-    alpha_plateau = []
 
     for key in alpha_map:
-        for plateau in plateau_combinations(alpha_map[key]):
-            alpha_plateau = Alpha_Plateau(plateau, plateau[0].player, plateau[0].alpha)
-        all_plateaus.append(alpha_plateau)
+        if alpha_map[key]:
+            all_plateaus.append(AlphaPlateau(alpha_map[key]))
 
     return all_plateaus
 
@@ -188,23 +202,25 @@ def get_admissible_t(viacomp_list, plateau_u):
     admissible_plans = []
 
     for viacomp_t in viacomp_list:
-        if is_admissible(viacomp_t, plateau_u):
-            admissible_plans.append(Admissible(viacomp_t))
+        is_admissible, threat_pair = check_admissible(viacomp_t, plateau_u)
+
+        if is_admissible:
+            admissible_plans.append(Admissible(viacomp_t, threat_pair))
 
     return admissible_plans
 
 
-def is_admissible(viacomp, plateau_u):
+def check_admissible(viacomp, plateau_u):
     state_t = viacomp.state
     plan_g = viacomp.plan
 
     # AD-i
     if state_t.alpha > 0:
-        return True
+        return True, None
 
     # AD-ii
     if not plan_g.is_absorbing():
-        return True
+        return True, None
 
     visited_dict = {state: False for state in plateau_u.u_map}
     appeared_once = True
@@ -219,32 +235,36 @@ def is_admissible(viacomp, plateau_u):
 
         # AD-i: Different payoffs so state_t != state_u
         if appeared_once and state_t.same_player(state_u) and state_u.get_payoff() > state_t.get_payoff():
-            return True
+            return True, None
 
         # AD-iv (b)
         if not state_t.same_player(state_u) and appeared_once:
-            if is_threat_pair(state_t, state_u, plan_g):
-                return True
+            is_threat, threat_pair = is_threat_pair(state_t, state_u, plan_g)
+            if is_threat:
+                return True, threat_pair
 
-    return appeared_once
+    return appeared_once, None
 
 
 def is_threat_pair(state_t, state_x: State, plan_g):
     # (c)
-    for state_v in state_x.neighbours:
+    for state_v in state_x.get_actions():
         # (d)
-        if plan_g[first_occurrence_index(plan_g, state_x) + 1] == state_v:
+        if first_action(plan_g, state_x) == state_v:
             continue
         # (e)
-        for plan_v in state_v.viable:
+        for plan_v in state_v.get_viable():
             if not alpha_sat(plan_v, [state_x]) and not alpha_sat(plan_v, [state_t]):
-                print(f'\n{plan_g}')
-                print(f'{state_t} alpha = {state_t.alpha}')
-                print(f'{state_x} alpha = {state_x.alpha}')
-                print(f'{state_t} Treat pair ({state_x}, {plan_v})')
-                return True
+                return True, ThreatPair(state_t, state_x, plan_v)
 
-    return False
+    return False, None
+
+
+def first_action(plan_g, state_t):
+    first_index_t = first_occurrence_index(plan_g, state_t)
+    if first_index_t + 1 == len(plan_g):
+        return state_t
+    return plan_g[first_index_t + 1]
 
 
 def first_occurrence_index(plan_g, state_t):
@@ -272,19 +292,29 @@ def viabel_compatible(state_t, plateau, U_compatible):
             if state_u not in plan_g:
                 continue
 
-            first_action_index = first_occurrence_index(plan_g, state_u) + 1
+            # first_action_index = first_occurrence_index(plan_g, state_u) + 1
+            action_u = first_action(plan_g, state_u)
 
-            if plan_g[first_action_index] in U_compatible[state_u]:
-                u_t[state_u] = plan_g[first_action_index]
+            if action_u in U_compatible[state_u]:
+                u_t[state_u] = action_u
                 continue
 
             is_viable_compatible = False
             break
 
         if is_viable_compatible:
-            u_map = Plateau_U(u_t)
+            u_map = PlateauU(u_t)
             viabel_plans = viacomp_u.get(u_map, [])
             viabel_plans.append(Viacomp(state_t, plan_g))
             viacomp_u[u_map] = viabel_plans
 
     return viacomp_u
+
+
+def get_all_states(game_dict):
+    all_states = set()
+
+    for state in game_dict:
+        all_states.update({state, state.terminal_state})
+
+    return all_states

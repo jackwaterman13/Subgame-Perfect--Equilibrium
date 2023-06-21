@@ -1,4 +1,4 @@
-from .State import *
+from .state import *
 
 
 def get_all_plans(state_t):
@@ -75,12 +75,12 @@ class Plan:
 
     def __str__(self):
         if not self.absorbing:
-            return str(self.plan) + ' N-A'
+            return str(self.plan) + 'Non-absorbing'
         return str(self.plan)
 
     def __repr__(self):
         if not self.absorbing:
-            return repr(self.plan) + ' N-A'
+            return repr(self.plan) + 'Non-absorbing'
         return repr(self.plan)
 
     def __eq__(self, other):
@@ -102,3 +102,18 @@ class Plan:
 
     def is_absorbing(self):
         return self.absorbing
+
+    def update_plan(self, game):
+
+        updated_plan = []
+        for state_t in self.plan:
+            for state_u in game:
+                if state_t == state_u:
+                    updated_plan.append(state_u)
+                    break
+
+                if state_t == state_u.terminal_state:
+                    updated_plan.append(state_u.terminal_state)
+                    break
+
+        return Plan(updated_plan, self.absorbing)

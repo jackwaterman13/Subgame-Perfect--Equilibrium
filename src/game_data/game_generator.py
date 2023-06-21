@@ -1,13 +1,23 @@
 import json
 import string
-
 import numpy as np
-from .State import *
+from .state import *
 
 
 def create_game(num_players, num_states):
     states = create_states(num_players, num_states)
     create_edges(states, num_states)
+    create_terminals(states, num_players)
+
+    for state in states:
+        state.create_plans()
+
+    return {state: state.neighbours for state in states}
+
+
+def create_cycle_game(num_players, num_states, cycle_length=4):
+    states = create_states(num_players, num_states)
+    create_cycle_edges(states, num_states, cycle_length)
     create_terminals(states, num_players)
 
     for state in states:
@@ -69,6 +79,61 @@ def create_edges(states, num_states):
 
         state.add_neighbour(neighbour)
         edge_count += 1
+
+
+def create_cycle_edges(states, num_states, cycle_length):
+    max_edges = num_states * (num_states - 1)
+    min_edges = num_states + 3
+
+    num_edges = min_edges
+
+    cycle_start = np.random.choice(states)
+
+    cycle_end = np.random.choice(list_less(states, cycle_start))
+    cycle_end.add_neighbour(cycle_start)
+    edge_count = 1
+
+    cycle = {cycle_start, cycle_end}
+    state_x = cycle_start
+
+    while len(cycle) < cycle_length - 1:
+        state_y = np.random.choice(states)
+        if state_y in cycle:
+            continue
+        state_x.add_neighbour(state_y)
+        cycle.add(state_y)
+        state_x = state_y
+        edge_count += 1
+
+    state_x.add_neighbour(cycle_end)
+    cycle.add(cycle_end)
+    edge_count += 1
+    state_set = set(states)
+
+    for state in states:
+        if not state.neighbours:
+            neighbour = np.random.choice(list(state_set.difference([state])))
+            state.add_neighbour(neighbour)
+            edge_count += 1
+
+    # Add missing edges
+    while edge_count < num_edges:
+
+        state = np.random.choice(states)
+        neighbour = np.random.choice(states)
+
+        # This is very inefficient
+        if neighbour == state or neighbour in state.neighbours:
+            continue
+
+        state.add_neighbour(neighbour)
+        edge_count += 1
+
+
+def list_less(items, less):
+    items = items.copy()
+    items.remove(less)
+    return items
 
 
 def create_terminals(states, num_players, min_payoff=-2, max_payoff=2):
@@ -179,7 +244,8 @@ def get_neighbour_list(neighbours, states):
 
 
 if __name__ == "__main__":
-    game = fig_4_game()
-    save_game(game, 'fig_4_game')
-
-    game = read_game('fig_4_game')
+    pass
+    # game = fig_4_game()
+    # save_game(game, 'fig_4_game')
+    #
+    # game = read_game('fig_4_game')

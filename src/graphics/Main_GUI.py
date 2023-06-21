@@ -103,7 +103,6 @@ class GUI:
 
         if self.converged:
             self.step_alpha(f'Final Alpha')
-
         else:
             self.right_b2.configure(text="Continue", command=self.step_viable())
 
@@ -179,13 +178,29 @@ class GUI:
 
         self.treeview_output(*build_nested_dict(viacomp), 'Viable Compatible Plans')
         self.left_b1.configure(text="Back", command=self.step_U_compatible)
+        self.right_b2.configure(text="Continue", command=self.step_alpha_exits)
+
+    def step_alpha_exits(self):
+        alpha_exits = self.game.get_alpha_exits()
+
+        if not alpha_exits:
+            return self.step_admissible()
+
+        headings = ['Edge', 'X']
+        values = []
+
+        for alpha_exit in alpha_exits:
+            values.append((str(alpha_exit.edge), alpha_exit.subset_X))
+
+        self.treeview_output(headings, values, 'Legitimate Alpha Exits')
+        self.left_b1.configure(text="Back", command=self.step_U_compatible)
         self.right_b2.configure(text="Continue", command=self.step_admissible)
 
     def step_admissible(self):
         admissible = self.game.get_admissible()
 
         self.treeview_output(*build_nested_dict(admissible), 'Admissible Plans')
-        self.left_b1.configure(text="Back", command=self.step_viacomp)
+        self.left_b1.configure(text="Back", command=self.step_alpha_exits)
         self.right_b2.configure(text="Continue", command=self.step_beta)
 
     def step_beta(self):

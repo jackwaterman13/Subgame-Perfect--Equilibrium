@@ -1,4 +1,5 @@
-from .Plan_Finder import *
+import copy
+from .plan_finder import *
 
 
 class State:
@@ -58,6 +59,8 @@ class State:
         return self.suffix < other.suffix
 
     def get_actions(self):
+        if self.terminal:
+            return [self]
         actions = self.neighbours.copy()
         actions.append(self.terminal_state)
         return actions
@@ -118,3 +121,25 @@ class State:
         if self.terminal:
             return Plan([self])
         return self.viable
+
+    def copy_state(self):
+
+        if self.terminal:
+            print("Copying terminal State as state")
+
+        # Create a new instance of the class
+        new_instance = State(self.player, self.suffix)
+
+        new_instance.terminal_state = State(self.player, self.suffix, self.payoffs)
+        new_instance.payoffs = self.payoffs
+        new_instance.alpha = self.alpha
+        new_instance.plans = self.plans
+
+        return new_instance
+
+    def update_plans(self, game):
+        updated_plans = []
+        for plan in self.plans:
+            updated_plans.append(plan.update_plan(game))
+
+        self.plans = updated_plans
