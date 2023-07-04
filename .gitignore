@@ -122,5 +122,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-/src/graph-renders
-/src/game_saves
+/graph-renders
+/game_saves

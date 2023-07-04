@@ -7,73 +7,57 @@ from functools import partial
 idt = '   '
 
 
-def create_output_text(game_node, itr):
+def create_output_text(game_node: GameNode, itr):
     global idt
-    output = f'Iteration {itr}:\n'
-    itr_data = game_node.itr_data
-    plateau = game_node.plateau_u
-    gamma = itr_data.gamma
+    width = 286
 
-    output += f'{idt}- The admissible plan selected to update the alpha vector this iteration was: '
-    output += f'{gamma[plateau]} \u2208 ADMISS({gamma[plateau].state},U,\u03B1)\n{idt}'
+    admissible_plans = game_node.admissible_plans
 
-    output += f'- Here F(U) = {plateau.states} and'
+    lines = [f'ITERATION {itr}:'.center(width), '']
+    for subset in admissible_plans:
 
-    for state in plateau.u_map:
-        output += f' U({state}) = {plateau.u_map[state]},'
-    output = output[:-1] + '.'
-    alpha_exits = itr_data.alpha_exits
+        for u_set in admissible_plans[subset]:
+            u_list = list(u_set)
 
-    threat_pair = gamma[plateau].threat_pair
+            line = f'ADMISS(t, {[t[0] for t in u_list]}, \u03B1), with '
+            for item in u_list:
+                line += f'U({item[0]}) = {item[1]}, '
+            line = line[:-2]
+            lines.append(line.center(width))
 
-    if threat_pair is not None:
-        output += f'\n{idt}- This plan is admissible due to condition AD-iv: ' \
-                  f'threat pair ({threat_pair.state_x}, {threat_pair.plan_v}).'
+            for plan in admissible_plans[subset][u_set]:
+                lines.append(f'{plan}'.center(width))
 
-    if alpha_exits:
-        X_alpha = ''
-        sequences_i = []
-        for exit_i in alpha_exits:
-            X_alpha += f'{exit_i.subset_x}, '
+            lines.append('')
 
-            if exit_i.legitimate_sequences is not None:
-                if exit_i.legitimate_sequences:
-                    sequences_i.append(legitimate_sequences_output(exit_i))
+    end_alpha = game_node.end_alpha
+    lines.append(f'Updated Alpha:'.center(width))
 
-        output += f'\n{idt}- The set X(\u03B1) = [{X_alpha}'
-        output = output[:-2] + '].'
+    line = ''
+    for state in end_alpha:
+        line += f'\u03B1({state}) = {end_alpha[state]}{2 * idt}'
 
-        if sequences_i:
-            for sequence_i in sequences_i:
-                output += f'\n{idt}- {sequence_i}'
+    lines.append(line.center(width))
+
+    output = ''
+
+    for line in lines:
+        output += line + '\n'
 
     return output
-
-
-def legitimate_sequences_output(exit_i):
-    if not exit_i.legitimate_sequences:
-        return ''
-    sequences_i = f'The set X={exit_i.subset_x} has following legitimate \u03B1-exit sequences'
-    for sequence in exit_i.legitimate_sequences:
-        sequences_i += f'\n{idt}{idt}-The edge {sequence.edge} is an (\u03B1,{sequence.subset_z}) exit sequence.'
-
-    if sequences_i == f'The set X={exit_i.subset_x} has following legitimate \u03B1-exit sequences':
-        print('we')
-
-    return sequences_i
 
 
 class Ui_solver_window(object):
 
     def __init__(self, solver_window):
         self.name = 'new_test'
-        self.game_solver = Game_Solver()
+        self.game_solver = GameSolver()
 
-        self.game_paths = self.game_solver.get_game_paths()
+        self.game_paths = self.game_solver.game_path
         self.set_up_fonts()
 
-        self.img_names = ["game_img", "safe_step_img", "admiss_img"]
-        self.img_pos = [QtCore.QRect(0, 0, 500, 500), QtCore.QRect(500, 0, 500, 500), QtCore.QRect(1000, 0, 500, 500)]
+        self.img_names = ["game_img", "safe_step_img"]
+        self.img_pos = [QtCore.QRect(175, 0, 500, 500), QtCore.QRect(825, 0, 500, 500)]
 
         self.solver_window = solver_window
         self.setupUi()
@@ -156,10 +140,9 @@ def create_tab_img(name, tab, img_pos, img_path, font):
     create_tab_img_label(font, name[:-2], tab)
 
 
-img_labels = {"game_img": 'Alpha Values', "safe_step_img": 'Safe Steps', "admiss_img": 'Updated Alpha Values'}
-img_labels_pos = {"game_img": QtCore.QRect(0, 500, 500, 25),
-                  "safe_step_img": QtCore.QRect(500, 500, 500, 25),
-                  "admiss_img": QtCore.QRect(1000, 500, 500, 25)}
+img_labels = {"game_img": 'Alpha Values', "safe_step_img": 'Safe Steps'}
+img_labels_pos = {"game_img": QtCore.QRect(175, 500, 500, 25),
+                  "safe_step_img": QtCore.QRect(825, 500, 500, 25)}
 
 
 def create_tab_img_label(font, name, tab):
@@ -175,8 +158,16 @@ def create_tab_img_label(font, name, tab):
 
 
 def create_output_label(tab, text):
-    label = QtWidgets.QLabel(text, tab)
-    label.setGeometry(QtCore.QRect(0, 525, 1500, 275))
+    scroll_area = QtWidgets.QScrollArea(tab)
+    scroll_area.setGeometry(QtCore.QRect(0, 525, 1500, 275))
+    scroll_area.setWidgetResizable(True)
+
+    content_widget = QtWidgets.QWidget()
+    scroll_area.setWidget(content_widget)
+
+    vbox = QtWidgets.QVBoxLayout(content_widget)
+
+    label = QtWidgets.QLabel(text, content_widget)
     font = QtGui.QFont()
     font.setPointSize(11)
     label.setFont(font)
@@ -189,18 +180,17 @@ def create_output_label(tab, text):
     label.setAlignment(QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
     label.setStyleSheet("margin: 10px;")
     label.setObjectName("output_label")
+    label.setWordWrap(True)
+    vbox.addWidget(label)
+
+    return scroll_area
 
 
 def create_img_renders(game_node, img_names):
-    game_start = game_node.game_start
-    safe_steps = game_node.itr_data.safe_steps
-    game_end = game_node.game_end
-    it = IterationSolver(game_end, '')
-    end_safe = it.get_end_game_safe_steps()
+    game_graph = game_node.game_graph
 
-    return [render_game(game_start, img_names[0]),
-            render_safe_steps(game_start, safe_steps, img_names[1]),
-            render_safe_steps(game_end, end_safe, img_names[2])]
+    return [render_game(game_graph.neighbours_map, game_node.start_alpha, img_names[0]),
+            render_safe_steps(game_graph.neighbours_map, game_node.start_alpha, game_node.safe_steps, img_names[1])]
 
 
 ui = None
