@@ -8,7 +8,7 @@ class Admissible:
         self.condition = condition
 
     def __str__(self):
-        return f'g = {self.plan}, \u03C6t = {self.state_payoff}'
+        return str(self.plan)
 
     def __repr__(self):
         return repr(self.plan)

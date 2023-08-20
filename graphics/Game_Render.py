@@ -18,7 +18,7 @@ def render_game(game_dict: dict, alpha, name=None):
 
     graph.render(directory='graph-renders', view=False, format='png')
 
-    return f'graph-renders/{name}.gv.png'
+    return f'./graph-renders/{name}.gv.png'
 
 
 def render_safe_steps(game_dict: dict, alpha, safe_steps, name=None):
@@ -47,7 +47,7 @@ def render_safe_steps(game_dict: dict, alpha, safe_steps, name=None):
 
     graph.render(directory='graph-renders', view=False, format='png')
 
-    return f'graph-renders/{name}.gv.png'
+    return f'./graph-renders/{name}.gv.png'
 
 
 def state_name(state, alpha):

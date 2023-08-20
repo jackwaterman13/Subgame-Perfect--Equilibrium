@@ -10,20 +10,19 @@ class IterationSolver:
 
         self.game_graph = game_graph
         self.states = game_graph.states
-        self.players = game_graph.players
         self.action_map = game_graph.action_map
         self.plans = game_graph.plans
 
-        self.viable_plans = dict()
-        self.plateaus = dict()
-        self.alpha_safe_combinations = dict()
-        self.safe_steps = dict()
-        self.viacomp_plans = dict()
-        self.admissible_plans = dict()
+        self.viable_plans = None
+        self.safe_steps = None
+        self.plateaus = None
+        self.alpha_safe_combinations = None
+        self.viacomp_plans = None
+        self.admissible_plans = None
 
         self.alpha = None
 
-    def perform_iteration(self, alpha):
+    def perform_iteration(self, alpha, itr_num):
         self.alpha = alpha
         self.find_viable_plans()
         self.find_safe_steps()
@@ -31,14 +30,16 @@ class IterationSolver:
         self.find_viacomp_plans()
         self.find_admissible_plans()
 
-        return self.admissible_plans.copy(), self.safe_steps.copy()
+        return self.admissible_plans.copy(), self.safe_steps.copy(), self.viable_plans.copy()
 
     def find_viable_plans(self):
+        self.viable_plans = dict()
         for state in self.states:
             self.viable_plans[state] = find_viable(state, self.plans, self.alpha)
             self.viable_plans[state.terminal_state] = [Plan([state.terminal_state])]
 
     def find_safe_steps(self):
+        self.safe_steps = dict()
         for state in self.states:
             self.safe_steps[state] = find_state_safe_steps(state,
                                                            self.viable_plans,
@@ -46,18 +47,18 @@ class IterationSolver:
                                                            self.alpha)
 
     def find_plateaus(self):
-
+        self.plateaus = dict()
         for state in self.states:
             plateau = Plateau(state.player, self.alpha[state])
 
             if self.plateaus.get(plateau) is None:
-                self.plateaus[plateau] = [state]
+                self.plateaus[plateau] = {state}
                 continue
 
-            self.plateaus[plateau].append(state)
+            self.plateaus[plateau].add(state)
 
     def find_viacomp_plans(self):
-
+        self.viacomp_plans = dict()
         for plateau in self.plateaus:
             plateau_set = self.plateaus[plateau]
             plateau_combinations = find_subsets(plateau_set)
@@ -65,7 +66,7 @@ class IterationSolver:
                 self.viacomp_plans[subset] = find_subset_viacomp_plans(subset, self.viable_plans, self.safe_steps)
 
     def find_admissible_plans(self):
-
+        self.admissible_plans = dict()
         for subset_u in self.viacomp_plans:
             self.admissible_plans[subset_u] = find_subset_admissible_plans(self.viacomp_plans[subset_u],
                                                                            self.viable_plans,
@@ -135,15 +136,18 @@ def find_subset_admissible_plans(viacomp_plans, viable_plans, action_map, alpha)
             state_t = plan[0]
 
             if alpha[state_t] > 0:
-                admissible_plans[u_map].append(Admissible(state_t, plan, u_map, 'AD-i: \u03B1 > 0'))
+                admissible_plans[u_map].append(Admissible(state_t, plan, u_map, 'AD-i'))
                 continue
 
             if not plan.is_absorbing:
-                admissible_plans[u_map].append(Admissible(state_t, plan, u_map, 'AD-ii: non-absorbing'))
+                admissible_plans[u_map].append(Admissible(state_t, plan, u_map, 'AD-ii'))
                 continue
 
             visited_dict = {state: False for state in u_map}
             appeared_once = True
+            is_threat = False
+            threat_pair = None
+            AD_i = False
 
             for state_u in plan:
 
@@ -158,18 +162,24 @@ def find_subset_admissible_plans(viacomp_plans, viable_plans, action_map, alpha)
 
                 # AD-i: Different payoffs so state_t != state_u
                 if appeared_once and state_t.player == state_u.player and alpha[state_u] > alpha[state_t]:
-                    admissible_plans[u_map].append(Admissible(state_t, plan, u_map,
-                                                              f'AD-i: {state_u}.\u03B1 > {state_t}.\u03B1'))
+                    admissible_plans[u_map].append(Admissible(state_t, plan, u_map, 'AD-i'))
+                    AD_i = True
+                    break
 
                 # AD-iv (b)
                 if state_t.player != state_u.player and appeared_once:
                     is_threat, threat_pair = is_threat_pair(state_t, state_u, viable_plans, alpha, action_map, plan)
-                    if is_threat:
-                        admissible_plans[u_map].append(Admissible(state_t, plan, u_map, threat_pair))
+
+            if AD_i:
+                continue
+
+            if is_threat:
+                admissible_plans[u_map].append(Admissible(state_t, plan, u_map, threat_pair))
+                continue
 
             if appeared_once:
-                admissible_plans[u_map].append(Admissible(state_t, plan, u_map,
-                                                          'AD-iii: Each state of F(U) appeared once'))
+                admissible_plans[u_map].append(Admissible(state_t, plan, u_map, 'AD-iii'))
+                continue
 
     return admissible_plans
 

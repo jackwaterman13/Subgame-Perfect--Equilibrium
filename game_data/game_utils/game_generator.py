@@ -9,26 +9,41 @@ def create_states(num_players, num_states):
         raise Exception(f'The number of players ({num_players}) is greater than the number of states ({num_states})')
 
     players = np.arange(num_players)
-    states = [State(player, create_payoffs(num_players)) for player in players]
 
     if num_players == num_states:
-        return states
+        states = [State(player, create_payoffs(num_players)) for player in players]
+        return states, players
+
+    states = []
+    state_cnt = num_players
 
     letters = list(string.ascii_lowercase)
     player_dict = {player: [] for player in players}
 
-    while len(states) < num_states:
+    while state_cnt < num_states:
         player = np.random.choice(players)
+
+        if not player_dict[player]:
+            player_dict[player].append('a')
+
         suffix = letters[len(player_dict[player])]
-
         player_dict[player].append(suffix)
-        states.append(State(player, create_payoffs(num_players), suffix=suffix))
 
-    return states, players
+        state_cnt += 1
+
+    for player in player_dict:
+
+        if not player_dict[player]:
+            states.append(State(player, create_payoffs(num_players)))
+            continue
+
+        for suffix in player_dict[player]:
+            states.append(State(player, create_payoffs(num_players), suffix))
+
+    return states
 
 
 def create_edges(states, cycle_length):
-
     edge_map = {state: [] for state in states}
     for state in edge_map:
         edge_map[state].append(state.terminal_state)
@@ -40,7 +55,7 @@ def create_edges(states, cycle_length):
 
     # Create the cycle
     for i in range(cycle_length - 1):
-        edge_map[shuffled_states[i]].append(shuffled_states[i+1])
+        edge_map[shuffled_states[i]].append(shuffled_states[i + 1])
         total_edges += 1
 
     # Complete the cycle
@@ -48,7 +63,7 @@ def create_edges(states, cycle_length):
     total_edges += 1
 
     # Add extra edges
-    while total_edges < len(states) + 3:
+    while total_edges < len(states) + 1:
         state_x, state_y = np.random.choice(states, 2, replace=False)
 
         if state_y in edge_map[state_x]:
@@ -83,18 +98,17 @@ def example_game_1():
 
 
 def fig_4_game():
-    states = [State(0, suffix='a'), State(1), State(0, suffix='b'), State(2)]
-    payoffs = [[-2, 0, 1], [-3, 1, 0], [-1, 2, -2], [2, 2, -1]]
-    neighbours_list = [[states[1]], [states[2]], [states[0], states[3]], [states[0]]]
+    states = [State(0, [-2, 0, 1], suffix='a'), State(1, [-3, 1, 0]),
+              State(0, [-1, 2, -2], suffix='b'), State(2, [2, 2, -1])]
 
-    for state, neighbours, payoff in zip(states, neighbours_list, payoffs):
-        state.add_neighbours(neighbours)
-        state.add_terminal(payoff)
+    edge_map = {state: [state.terminal_state] for state in states}
 
-    for state in states:
-        state.create_plans()
+    edge_map[states[0]].extend([states[1]])
+    edge_map[states[1]].extend([states[2]])
+    edge_map[states[2]].extend([states[0], states[3]])
+    edge_map[states[3]].extend([states[0]])
 
-    return {state: state.neighbours for state in states}
+    return states, edge_map
 
 
 def alpha_exit_game_1():

@@ -81,9 +81,12 @@ class Plan:
     def __getitem__(self, item):
         return self.plan[item]
 
-    def get_payoff(self, state_t):
+    def get_payoff(self, state_t=None):
         if not self.is_absorbing:
             return 0
+
+        if state_t is None:
+            return self.plan[-1].payoffs[self.plan[0].player]
 
         return self.plan[-1].payoffs[state_t.player]
 

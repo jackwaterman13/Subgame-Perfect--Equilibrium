@@ -29,3 +29,7 @@ class State:
         if isinstance(other, State):
             return self.state_id == other.state_id
         return False
+
+    def update_state_payoffs(self, payoffs):
+        self.payoffs = payoffs
+        self.terminal_state.payoffs = payoffs
